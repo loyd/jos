@@ -16,7 +16,7 @@
 struct Env env_array[NENV];
 struct Env *curenv = NULL;
 struct Env *envs = env_array;		// All environments
-static struct Env *env_free_list;	// Free environment list
+static struct Env *env_free_list = NULL;	// Free environment list
 					// (linked by Env->env_link)
 
 #define ENVGENSHIFT	12		// >= LOGNENV
@@ -28,7 +28,7 @@ extern unsigned int bootstacktop;
 // Set up global descriptor table (GDT) with separate segments for
 // kernel mode and user mode.  Segments serve many purposes on the x86.
 // We don't use any of their memory-mapping capabilities, but we need
-// them to switch privilege levels. 
+// them to switch privilege levels.
 //
 // The kernel and user segments are identical except for the DPL.
 // To load the SS register, the CPL must equal the DPL.  Thus,
@@ -120,8 +120,15 @@ void
 env_init(void)
 {
 	// Set up envs array
-	//LAB 3: Your code here.
-	
+	int n = NENV;
+
+	while (n --> 0) {
+		envs[n].env_status = ENV_FREE;
+		envs[n].env_link = env_free_list;
+
+		env_free_list = envs + n;
+	}
+
 	// Per-CPU part of the initialization
 	env_init_percpu();
 }
@@ -255,31 +262,43 @@ bind_functions(struct Env *e, struct Elf *elf)
 static void
 load_icode(struct Env *e, uint8_t *binary, size_t size)
 {
-	// Hints:
-	//  Load each program segment into memory
-	//  at the address specified in the ELF section header.
-	//  You should only load segments with ph->p_type == ELF_PROG_LOAD.
-	//  Each segment's address can be found in ph->p_va
-	//  and its size in memory can be found in ph->p_memsz.
-	//  The ph->p_filesz bytes from the ELF binary, starting at
-	//  'binary + ph->p_offset', should be copied to address
-	//  ph->p_va.  Any remaining memory bytes should be cleared to zero.
-	//  (The ELF header should have ph->p_filesz <= ph->p_memsz.)
-	//
-	//  ELF segments are not necessarily page-aligned, but you can
-	//  assume for this function that no two segments will touch
-	//  the same page.
-	//
-	//  You must also do something with the program's entry point,
-	//  to make sure that the environment starts executing there.
-	//  What?  (See env_run() and env_pop_tf() below.)
+	assert(e);
+	assert(binary);
 
-	//LAB 3: Your code here.
-	
+	struct Elf *elf = (struct Elf *)binary;
+
+	if (elf->e_magic != ELF_MAGIC) {
+		goto invalid_elf;
+	}
+
+	struct Proghdr *ph = (struct Proghdr *)(binary + elf->e_phoff);
+	struct Proghdr *eph = ph + elf->e_phnum;
+
+	for (; ph < eph; ph++) {
+		if (ph->p_type != ELF_PROG_LOAD) {
+			continue;
+		}
+
+		if (ph->p_filesz > ph->p_memsz) {
+			goto invalid_elf;
+		}
+
+		memcpy((void *)ph->p_va, binary + ph->p_offset, ph->p_filesz);
+		memset((void *)(ph->p_va + ph->p_filesz), 0, ph->p_memsz - ph->p_filesz);
+	}
+
+	e->env_tf.tf_eip = elf->e_entry;
+	e->env_tf.tf_eflags = elf->e_flags;
+
+	return;
+
 #ifdef CONFIG_KSPACE
 	// Uncomment this for task №5.
 	//bind_functions();
 #endif
+
+invalid_elf:
+	panic("Cannot load icode: invalid elf");
 }
 
 //
@@ -292,7 +311,15 @@ load_icode(struct Env *e, uint8_t *binary, size_t size)
 void
 env_create(uint8_t *binary, size_t size, enum EnvType type)
 {
-	//LAB 3: Your code here.
+	int ret;
+	struct Env *env;
+
+	if ((ret = env_alloc(&env, 0))) {
+		panic("Cannot create an env: %i", ret);
+	}
+
+	load_icode(env, binary, size);
+	env->env_type = type;
 }
 
 //
@@ -396,6 +423,8 @@ env_pop_tf(struct Trapframe *tf)
 void
 env_run(struct Env *e)
 {
+	assert(e);
+
 #ifdef CONFIG_KSPACE
 	cprintf("envrun %s: %d\n",
 		e->env_status == ENV_RUNNING ? "RUNNING" :
@@ -403,23 +432,17 @@ env_run(struct Env *e)
 		ENVX(e->env_id));
 #endif
 
-	// Step 1: If this is a context switch (a new environment is running):
-	//	   1. Set the current environment (if any) back to
-	//	      ENV_RUNNABLE if it is ENV_RUNNING (think about
-	//	      what other states it can be in),
-	//	   2. Set 'curenv' to the new environment,
-	//	   3. Set its status to ENV_RUNNING,
-	//	   4. Update its 'env_runs' counter,
-	// Step 2: Use env_pop_tf() to restore the environment's
-	//	   registers and starting execution of process.
+	if (e->env_status != ENV_RUNNING) {
+		assert(e->env_status == ENV_RUNNABLE);
 
-	// Hint: This function loads the new environment's state from
-	//	e->env_tf.  Go back through the code you wrote above
-	//	and make sure you have set the relevant parts of
-	//	e->env_tf to sensible values.
-	//
-	//LAB 3: Your code here.
+		if (curenv && curenv->env_status == ENV_RUNNING) {
+			curenv->env_status = ENV_RUNNABLE;
+		}
 
+		curenv = e;
+		curenv->env_status = ENV_RUNNING;
+		++curenv->env_runs;
+	}
 
 	env_pop_tf(&e->env_tf);
 }
