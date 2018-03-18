@@ -24,6 +24,7 @@ struct Command {
 static struct Command commands[] = {
 	{ "help", "Display this list of commands", mon_help },
 	{ "kerninfo", "Display information about the kernel", mon_kerninfo },
+	{ "echo", "Echo!", mon_echo },
 };
 #define NCOMMANDS (sizeof(commands)/sizeof(commands[0]))
 
@@ -56,6 +57,18 @@ mon_kerninfo(int argc, char **argv, struct Trapframe *tf)
             (uint32_t)end, (uint32_t)end - KERNTOP);
 	cprintf("Kernel executable memory footprint: %dKB\n",
 		ROUNDUP(end - entry, 1024) / 1024);
+	return 0;
+}
+
+int
+mon_echo(int argc, char **argv, struct Trapframe *tf)
+{
+	for (int i = 1; i < argc; ++i) {
+		cprintf("%s ", argv[i]);
+	}
+
+	cprintf("\n");
+
 	return 0;
 }
 
