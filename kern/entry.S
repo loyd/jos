@@ -109,11 +109,12 @@ sys_yield:
 	call csys_yield
 	jmp .
 
-#LAB 3: Your code here.
 .stabs "sys_exit:",36,0,0,sys_exit
 .globl sys_exit
 .type  sys_exit, @function
 sys_exit:
+	movl $0x0,%ebp
+	movl $(bootstacktop),%esp
 	call csys_exit
 	jmp .
 #endif
@@ -126,6 +127,6 @@ sys_exit:
 	.globl		bootstack
 bootstack:
 	.space		KSTKSIZE
-	.globl		bootstacktop   
+	.globl		bootstacktop
 bootstacktop:
 
