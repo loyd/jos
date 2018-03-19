@@ -12,6 +12,7 @@
 #include <kern/monitor.h>
 #include <kern/sched.h>
 #include <kern/cpu.h>
+#include <kern/kdebug.h>
 
 struct Env env_array[NENV];
 struct Env *curenv = NULL;
@@ -223,18 +224,34 @@ env_alloc(struct Env **newenv_store, envid_t parent_id)
 static void
 bind_functions(struct Env *e, struct Elf *elf)
 {
-	//find_function from kdebug.c should be used
-	//LAB 3: Your code here.
+	if (!elf->e_shoff) {
+		panic("Section header table is not found");
+	}
 
-	/*
-	*((int *) 0x00231008) = (int) &cprintf;
-	*((int *) 0x00221004) = (int) &sys_yield;
-	*((int *) 0x00231004) = (int) &sys_yield;
-	*((int *) 0x00241004) = (int) &sys_yield;
-	*((int *) 0x0022100c) = (int) &sys_exit;
-	*((int *) 0x00231010) = (int) &sys_exit;
-	*((int *) 0x0024100c) = (int) &sys_exit;
-	*/
+	struct Secthdr *sh = (struct Secthdr *)((uint8_t *)elf + elf->e_shoff);
+
+	for (int i = 0; i < elf->e_shnum; ++i) {
+		if (sh[i].sh_type != ELF_SHT_SYMTAB) {
+			continue;
+		}
+
+		int n = sh[i].sh_size / sh[i].sh_entsize;
+		struct Elf32_Sym *sym = (struct Elf32_Sym *)((uint8_t *)elf + sh[i].sh_offset);
+		char *strtab = (char *)((uint8_t *)elf + sh[sh[i].sh_link].sh_offset);
+
+		for (; n --> 0; ++sym) {
+			if (ELF32_ST_TYPE(sym->st_info) != STT_OBJECT) {
+				continue;
+			}
+
+			const char *name = strtab + sym->st_name;
+			uintptr_t addr = find_function(name);
+
+			if (addr) {
+				*((int *)sym->st_value) = addr;
+			}
+		}
+	}
 }
 #endif
 
@@ -289,12 +306,11 @@ load_icode(struct Env *e, uint8_t *binary, size_t size)
 	e->env_tf.tf_eip = elf->e_entry;
 	e->env_tf.tf_eflags = elf->e_flags;
 
-	return;
-
 #ifdef CONFIG_KSPACE
-	// Uncomment this for task №5.
-	//bind_functions();
+	bind_functions(e, elf);
 #endif
+
+	return;
 
 invalid_elf:
 	panic("Cannot load icode: invalid elf");
