@@ -27,10 +27,14 @@ static void check_list(void)
 	__asm __volatile("sti;");
 }
 
+DEFINE_SPINLOCK(ALLOC_LOCK);
+
 /* malloc: general-purpose storage allocator */
 void *
 test_alloc(uint8_t nbytes)
 {
+	spin_lock(&ALLOC_LOCK);
+
 	Header *p;
 	unsigned nunits;
 
@@ -56,9 +60,14 @@ test_alloc(uint8_t nbytes)
 				p += p->s.size;
 				p->s.size = nunits;
 			}
+
+			spin_unlock(&ALLOC_LOCK);
+
 			return (void *)(p + 1);
 		}
 		if (p == freep) { /* wrapped around free list */
+			spin_unlock(&ALLOC_LOCK);
+
 			return NULL;
 		}
 	}
@@ -68,6 +77,8 @@ test_alloc(uint8_t nbytes)
 void
 test_free(void *ap)
 {
+	spin_lock(&ALLOC_LOCK);
+
 	Header *bp, *p;
 	bp = (Header *) ap - 1; /* point to block header */
 
@@ -95,5 +106,7 @@ test_free(void *ap)
 	freep = p;
 
 	check_list();
+
+	spin_unlock(&ALLOC_LOCK);
 }
 

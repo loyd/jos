@@ -22,6 +22,19 @@ void __spin_initlock(struct spinlock *lk, char *name);
 void spin_lock(struct spinlock *lk);
 void spin_unlock(struct spinlock *lk);
 
+#ifdef DEBUG_SPINLOCK
+#define DEFINE_SPINLOCK(name)       \
+	static struct spinlock name = { \
+		.locked = 0,                \
+		.name = #name,              \
+	};
+#else
+#define DEFINE_SPINLOCK(name)       \
+	static struct spinlock name = { \
+		.locked = 0,                \
+	};
+#endif
+
 #define spin_initlock(lock)   __spin_initlock(lock, #lock)
 
 extern struct spinlock kernel_lock;
