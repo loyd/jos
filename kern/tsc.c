@@ -190,14 +190,25 @@ void print_timer_error(void)
 	cprintf("Timer Error\n");
 }
 
-//Lab 5: You code here
-//Use print_time function to print timert result.
-//Use print_timer_error function to print error.
+static uint64_t start = 0;
+
 void timer_start(void)
 {
+	start = read_tsc();
 }
 
 void timer_stop(void)
 {
+	if (start == 0) {
+		print_timer_error();
+		return;
+	}
+
+	uint64_t delta = read_tsc() - start;
+	unsigned seconds = delta / cpu_freq / 1000;
+
+	print_time(seconds);
+
+	start = 0;
 }
 
