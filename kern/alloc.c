@@ -33,12 +33,12 @@ DEFINE_SPINLOCK(ALLOC_LOCK);
 void *
 test_alloc(uint8_t nbytes)
 {
-	spin_lock(&ALLOC_LOCK);
-
 	Header *p;
 	unsigned nunits;
 
 	nunits = (nbytes + sizeof(Header) - 1) / sizeof(Header) + 1;
+
+	spin_lock(&ALLOC_LOCK);
 
 	if (freep == NULL) { /* no free list yet */
 		((Header *) &space)->s.next = (Header *) &base;
@@ -49,22 +49,25 @@ test_alloc(uint8_t nbytes)
 
 	check_list();
 
-	for(p = freep->s.next; ; p = p->s.next) {
+	for (p = freep->s.next; ; p = p->s.next) {
 		if (p->s.size >= nunits) { /* big enough */
 			freep = p->s.prev;
 			if (p->s.size == nunits) { /* exactly */
 				(p->s.prev)->s.next = p->s.next;
 				(p->s.next)->s.prev = p->s.prev;
+
+				spin_unlock(&ALLOC_LOCK);
 			} else { /* allocate tail end */
 				p->s.size -= nunits;
 				p += p->s.size;
+
+				spin_unlock(&ALLOC_LOCK);
 				p->s.size = nunits;
 			}
 
-			spin_unlock(&ALLOC_LOCK);
-
 			return (void *)(p + 1);
 		}
+
 		if (p == freep) { /* wrapped around free list */
 			spin_unlock(&ALLOC_LOCK);
 
@@ -77,10 +80,10 @@ test_alloc(uint8_t nbytes)
 void
 test_free(void *ap)
 {
-	spin_lock(&ALLOC_LOCK);
-
 	Header *bp, *p;
 	bp = (Header *) ap - 1; /* point to block header */
+
+	spin_lock(&ALLOC_LOCK);
 
 	for (p = freep; !(bp > p && bp < p->s.next); p = p->s.next)
 		if (p >= p->s.next && (bp > p || bp < p->s.next))
@@ -103,6 +106,7 @@ test_free(void *ap)
 		p->s.next->s.prev = bp;
 		p->s.next = bp;
 	}
+
 	freep = p;
 
 	check_list();
