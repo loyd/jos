@@ -30,6 +30,7 @@ static struct Command commands[] = {
 	{ "backtrace", "Dump the backtrace", mon_backtrace },
 	{ "timer_start", "Start the timer", mon_timer_start },
 	{ "timer_stop", "Stop the timer", mon_timer_stop },
+	{ "pp_status", "Print status of the physical pages", mon_pp_status },
 };
 #define NCOMMANDS (sizeof(commands)/sizeof(commands[0]))
 
@@ -124,6 +125,40 @@ int
 mon_timer_stop(int argc, char **argv, struct Trapframe *tf)
 {
 	timer_stop();
+	return 0;
+}
+
+void
+print_pp_status(size_t start, size_t end, bool is_free) {
+	const char *status = is_free ? "FREE" : "ALLOCATED";
+
+	if (start == end) {
+		cprintf("%u %s\n", start, status);
+	} else {
+		cprintf("%u..%u %s\n", start, end, status);
+	}
+}
+
+int
+mon_pp_status(int argc, char **argv, struct Trapframe *tf)
+{
+	bool st_is_free = false;
+	size_t st = 0;
+
+	for (size_t i = 1; i < npages; ++i) {
+		// TODO: case when last in page_free_list.
+		bool is_free = pages[i].pp_link != NULL;
+
+		if (st_is_free != is_free) {
+			print_pp_status(st, i - 1, st_is_free);
+
+			st = i;
+			st_is_free = is_free;
+		}
+	}
+
+	print_pp_status(st, npages - 1, st_is_free);
+
 	return 0;
 }
 
