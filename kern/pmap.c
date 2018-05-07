@@ -337,22 +337,36 @@ page_decref(struct PageInfo* pp)
 //    - Otherwise, the new page's reference count is incremented,
 //	the page is cleared,
 //	and pgdir_walk returns a pointer into the new page table page.
-//
-// Hint 1: you can turn a Page * into the physical address of the
-// page it refers to with page2pa() from kern/pmap.h.
-//
-// Hint 2: the x86 MMU checks permission bits in both the page directory
-// and the page table, so it's safe to leave permissions in the page
-// directory more permissive than strictly necessary.
-//
-// Hint 3: look at inc/mmu.h for useful macros that mainipulate page
-// table and page directory entries.
-//
 pte_t *
 pgdir_walk(pde_t *pgdir, const void *va, int create)
 {
-	// Fill this function in
-	return NULL;
+	assert(pgdir);
+
+	pde_t pde = pgdir[PDX(va)];
+
+	if (pde & PTE_P) {
+		pte_t *pt = KADDR(PTE_ADDR(pde));
+
+		return pt + PTX(va);
+	}
+
+	if (!create) {
+		return NULL;
+	}
+
+	struct PageInfo *page = page_alloc(ALLOC_ZERO);
+
+	if (!page) {
+		return NULL;
+	}
+
+	pgdir[PDX(va)] = page2pa(page) | PTE_U | PTE_W | PTE_P;
+
+	++page->pp_ref;
+
+	pte_t *pt = page2kva(page);
+
+	return pt + PTX(va);
 }
 
 //
@@ -369,7 +383,19 @@ pgdir_walk(pde_t *pgdir, const void *va, int create)
 static void
 boot_map_region(pde_t *pgdir, uintptr_t va, size_t size, physaddr_t pa, int perm)
 {
-	// Fill this function in
+	assert(pgdir);
+	assert(size % PGSIZE == 0);
+	assert(va % PGSIZE == 0);
+	assert(pa % PGSIZE == 0);
+
+	for (; size >= PGSIZE; size -= PGSIZE) {
+		pte_t *pte = pgdir_walk(pgdir, (void *)va, true);
+
+		*pte = pa | perm | PTE_P;
+
+		va += PGSIZE;
+		pa += PGSIZE;
+	}
 }
 
 //
@@ -400,7 +426,28 @@ boot_map_region(pde_t *pgdir, uintptr_t va, size_t size, physaddr_t pa, int perm
 int
 page_insert(pde_t *pgdir, struct PageInfo *pp, void *va, int perm)
 {
-	// Fill this function in
+	assert(pgdir);
+	assert(pp);
+
+	pte_t *pte = pgdir_walk(pgdir, va, true);
+
+	if (!pte) {
+		return -E_NO_MEM;
+	}
+
+	physaddr_t pa = page2pa(pp);
+
+	if (PTE_ADDR(*pte) != pa) {
+		if (*pte & PTE_P) {
+			page_remove(pgdir, va);
+			tlb_invalidate(pgdir, va);
+		}
+
+		++pp->pp_ref;
+	}
+
+	*pte = pa | perm | PTE_P;
+
 	return 0;
 }
 
@@ -413,13 +460,22 @@ page_insert(pde_t *pgdir, struct PageInfo *pp, void *va, int perm)
 //
 // Return NULL if there is no page mapped at va.
 //
-// Hint: the TA solution uses pgdir_walk and pa2page.
-//
 struct PageInfo *
 page_lookup(pde_t *pgdir, void *va, pte_t **pte_store)
 {
-	// Fill this function in
-	return NULL;
+	assert(pgdir);
+
+	pte_t *pte = pgdir_walk(pgdir, va, false);
+
+	if (!pte || !(*pte & PTE_P)) {
+		return NULL;
+	}
+
+	if (pte_store) {
+		*pte_store = pte;
+	}
+
+	return pa2page(PTE_ADDR(*pte));
 }
 
 //
@@ -434,13 +490,24 @@ page_lookup(pde_t *pgdir, void *va, pte_t **pte_store)
 //   - The TLB must be invalidated if you remove an entry from
 //     the page table.
 //
-// Hint: The TA solution is implemented using page_lookup,
-// 	tlb_invalidate, and page_decref.
-//
 void
 page_remove(pde_t *pgdir, void *va)
 {
-	// Fill this function in
+	assert(pgdir);
+
+	pte_t *pte;
+
+	struct PageInfo *page = page_lookup(pgdir, va, &pte);
+
+	if (!pte || !(*pte & PTE_P)) {
+		return;
+	}
+
+	page_decref(page);
+
+	*pte = 0;
+
+	tlb_invalidate(pgdir, va);
 }
 
 //
