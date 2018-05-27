@@ -274,8 +274,9 @@ page_fault_handler(struct Trapframe *tf)
 	fault_va = rcr2();
 
 	// Handle kernel-mode page faults.
-
-	// LAB 8: Your code here.
+	if (tf->tf_cs == GD_KT) {
+		panic("page fault in kernel");
+	}
 
 	// We've already handled kernel-mode exceptions, so if we get here,
 	// the page fault happened in user mode.
