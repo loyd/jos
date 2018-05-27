@@ -78,6 +78,9 @@ trap_init(void)
 		SETGATE(idt[i], 0, GD_KT, traphandlers[i], 0);
 	}
 
+	SETGATE(idt[T_BRKPT], 0, GD_KT, traphandlers[T_BRKPT], 3);
+	SETGATE(idt[T_SYSCALL], 0, GD_KT, traphandlers[T_SYSCALL], 3);
+
 	trap_init_percpu();
 }
 
@@ -166,6 +169,16 @@ trap_dispatch(struct Trapframe *tf)
 	switch (tf->tf_trapno) {
 		case T_PGFLT:
 			page_fault_handler(tf);
+			return;
+		case T_SYSCALL:
+			tf->tf_regs.reg_eax = syscall(
+				tf->tf_regs.reg_eax,
+				tf->tf_regs.reg_edx,
+				tf->tf_regs.reg_ecx,
+				tf->tf_regs.reg_ebx,
+				tf->tf_regs.reg_edi,
+				tf->tf_regs.reg_esi
+			);
 			return;
 	}
 
