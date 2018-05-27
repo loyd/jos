@@ -146,8 +146,7 @@ mon_pp_status(int argc, char **argv, struct Trapframe *tf)
 	size_t st = 0;
 
 	for (size_t i = 1; i < npages; ++i) {
-		// TODO: case when last in page_free_list.
-		bool is_free = pages[i].pp_link != NULL;
+		bool is_free = pages[i].pp_ref == 0;
 
 		if (st_is_free != is_free) {
 			print_pp_status(st, i - 1, st_is_free);
