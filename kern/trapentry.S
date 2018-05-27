@@ -57,7 +57,16 @@
 .type _alltraps, @function;
 .align 2
 _alltraps:
-    jmp .
+	push %ds
+	push %es
+	pushal
+
+	mov $GD_KD, %ax
+	mov %ax, %ds
+	mov %ax, %es
+
+	pushl %esp
+	call trap
 
 .globl clock_thdlr
 .type clock_thdlr, @function;
@@ -95,5 +104,72 @@ clock_thdlr:
 	jmp .
 #else
 TRAPHANDLER_NOEC(clock_thdlr, IRQ_OFFSET + IRQ_CLOCK)
-// LAB 8: Your code here.
+TRAPHANDLER_NOEC(traphandler0, 0)
+TRAPHANDLER_NOEC(traphandler1, 1)
+TRAPHANDLER_NOEC(traphandler2, 2)
+TRAPHANDLER_NOEC(traphandler3, 3)
+TRAPHANDLER_NOEC(traphandler4, 4)
+TRAPHANDLER_NOEC(traphandler5, 5)
+TRAPHANDLER_NOEC(traphandler6, 6)
+TRAPHANDLER_NOEC(traphandler7, 7)
+TRAPHANDLER(traphandler8, 8)
+TRAPHANDLER_NOEC(traphandler9, 9)
+TRAPHANDLER(traphandler10, 10)
+TRAPHANDLER(traphandler11, 11)
+TRAPHANDLER(traphandler12, 12)
+TRAPHANDLER(traphandler13, 13)
+TRAPHANDLER(traphandler14, 14)
+TRAPHANDLER_NOEC(traphandler15, 15)
+TRAPHANDLER_NOEC(traphandler16, 16)
+TRAPHANDLER_NOEC(traphandler17, 17)
+TRAPHANDLER_NOEC(traphandler18, 18)
+TRAPHANDLER_NOEC(traphandler19, 19)
+TRAPHANDLER_NOEC(traphandler20, 20)
+TRAPHANDLER_NOEC(traphandler21, 21)
+TRAPHANDLER_NOEC(traphandler22, 22)
+TRAPHANDLER_NOEC(traphandler23, 23)
+TRAPHANDLER_NOEC(traphandler24, 24)
+TRAPHANDLER_NOEC(traphandler25, 25)
+TRAPHANDLER_NOEC(traphandler26, 26)
+TRAPHANDLER_NOEC(traphandler27, 27)
+TRAPHANDLER_NOEC(traphandler28, 28)
+TRAPHANDLER_NOEC(traphandler29, 29)
+TRAPHANDLER_NOEC(traphandler30, 30)
+TRAPHANDLER_NOEC(traphandler31, 31)
 #endif
+
+.data
+.globl traphandlers
+traphandlers:
+	.long traphandler0
+	.long traphandler1
+	.long traphandler2
+	.long traphandler3
+	.long traphandler4
+	.long traphandler5
+	.long traphandler6
+	.long traphandler7
+	.long traphandler8
+	.long traphandler9
+	.long traphandler10
+	.long traphandler11
+	.long traphandler12
+	.long traphandler13
+	.long traphandler14
+	.long traphandler15
+	.long traphandler16
+	.long traphandler17
+	.long traphandler18
+	.long traphandler19
+	.long traphandler20
+	.long traphandler21
+	.long traphandler22
+	.long traphandler23
+	.long traphandler24
+	.long traphandler25
+	.long traphandler26
+	.long traphandler27
+	.long traphandler28
+	.long traphandler29
+	.long traphandler30
+	.long traphandler31
