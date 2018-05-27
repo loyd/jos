@@ -179,6 +179,7 @@ trap_dispatch(struct Trapframe *tf)
 				tf->tf_regs.reg_edi,
 				tf->tf_regs.reg_esi
 			);
+			return;
 		case T_BRKPT:
 			monitor(tf);
 			return;
