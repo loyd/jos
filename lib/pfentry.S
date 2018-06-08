@@ -77,7 +77,6 @@ _pgfault_upcall:
 	// Restore eflags from the stack.  After you do this, you can
 	// no longer use arithmetic operations or anything else that
 	// modifies eflags.
-	// LAB 9: Your code here.
 	popfl
 
 	// Switch back to the adjusted trap-time stack.
