@@ -47,8 +47,15 @@ bc_pgfault(struct UTrapframe *utf)
 	// Hint: first round addr to page boundary. fs/ide.c has code to read
 	// the disk.
 
-	sys_page_alloc(0, ROUNDDOWN(addr, PGSIZE), PTE_P | PTE_U | PTE_W);
-	ide_read(blockno * BLKSECTS, ROUNDDOWN(addr, PGSIZE), BLKSECTS);
+	addr = ROUNDDOWN(addr, BLKSIZE);
+
+	if (sys_page_alloc(0, addr, PTE_P | PTE_U | PTE_W)) {
+		panic("bc_pgfault: OOM");
+	}
+
+	if (ide_read(blockno * BLKSECTS, addr, BLKSECTS)) {
+		panic("bc_pgfault: ide read error");
+	}
 
 	// Clear the dirty bit for the disk block page since we just read the
 	// block from disk
@@ -77,11 +84,18 @@ flush_block(void *addr)
 
 	uint32_t blockno = ((uint32_t)addr - DISKMAP) / BLKSIZE;
 
-	addr = ROUNDDOWN(addr, PGSIZE);
+	addr = ROUNDDOWN(addr, BLKSIZE);
 
-	if (va_is_mapped(addr) && va_is_dirty(addr)) {
-		ide_write(BLKSECTS * blockno, addr, BLKSECTS);
-		sys_page_map(0, addr, 0, addr, PTE_SYSCALL);
+	if (!va_is_mapped(addr) || !va_is_dirty(addr)) {
+		return;
+	}
+
+	if (ide_write(BLKSECTS * blockno, addr, BLKSECTS)) {
+		panic("flush_block: ide write error");
+	}
+
+	if (sys_page_map(0, addr, 0, addr, uvpt[PGNUM(addr)] & PTE_SYSCALL)) {
+		panic("flush_block: page map error");
 	}
 }
 

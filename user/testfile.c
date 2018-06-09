@@ -111,6 +111,7 @@ umain(int argc, char **argv)
 
 	if ((f = open("/big", O_RDONLY)) < 0)
 		panic("open /big: %i", f);
+
 	for (i = 0; i < (NDIRECT*3)*BLKSIZE; i += sizeof(buf)) {
 		*(int*)buf = i;
 		if ((r = readn(f, buf, sizeof(buf))) < 0)

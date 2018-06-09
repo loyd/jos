@@ -140,8 +140,16 @@ devfile_write(struct Fd *fd, const void *buf, size_t n)
 	// careful: fsipcbuf.write.req_buf is only so large, but
 	// remember that write is always allowed to write *fewer*
 	// bytes than requested.
-	// LAB 10: Your code here
-	panic("devfile_write not implemented");
+
+	struct Fsreq_write *req = &fsipcbuf.write;
+
+	req->req_fileid = fd->fd_file.id;
+	req->req_n = n;
+	n = n > PGSIZE ? PGSIZE : n;
+
+	memmove(req->req_buf, buf, n);
+
+	return fsipc(FSREQ_WRITE, NULL);
 }
 
 static int

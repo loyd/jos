@@ -63,18 +63,16 @@ alloc_block(void)
 
 	uint32_t bn;
 	for (bn = 0; bn < super->s_nblocks; bn += 32) {
-		uint32_t chunk = bn / 32;
-
-		if (bitmap[chunk] == ~0) {
+		if (bitmap[bn / 32] == ~0) {
 			continue;
 		}
 
-		while (!(bitmap[chunk] & 1 << (bn % 32))) {
+		while (!(bitmap[bn / 32] & 1 << (bn % 32))) {
 			++bn;
 		}
 
-		bitmap[chunk] &= ~(1 << (bn % 32));
-		flush_block(diskaddr(bn));
+		bitmap[bn / 32] &= ~(1 << (bn % 32));
+		flush_block(bitmap);
 
 		return bn;
 	}
@@ -159,9 +157,9 @@ file_block_walk(struct File *f, uint32_t filebno, uint32_t **ppdiskbno, bool all
 
 	if (filebno < NDIRECT) {
 		*ppdiskbno = &(f->f_direct[filebno]);
+		return 0;
 	} else if (f->f_indirect) {
 		indirects = diskaddr(f->f_indirect);
-		*ppdiskbno = &(indirects[filebno - NDIRECT]);
 	} else {
 		if (!alloc) {
 			return -E_NOT_FOUND;
@@ -171,13 +169,14 @@ file_block_walk(struct File *f, uint32_t filebno, uint32_t **ppdiskbno, bool all
 			return bn;
 		}
 
+		memset(diskaddr(bn), 0, BLKSIZE);
+
 		f->f_indirect = bn;
-		flush_block(diskaddr(bn));
 
 		indirects = diskaddr(bn);
-
-		*ppdiskbno = &(indirects[filebno - NDIRECT]);
 	}
+
+	*ppdiskbno = &(indirects[filebno - NDIRECT]);
 
 	return 0;
 }
@@ -208,7 +207,6 @@ file_get_block(struct File *f, uint32_t filebno, char **blk)
 		}
 
 		*pdiskbno = bn;
-		flush_block(diskaddr(bn));
 	}
 
 	*blk = diskaddr(*pdiskbno);
