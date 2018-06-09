@@ -402,7 +402,6 @@ load_icode(struct Env *e, uint8_t *binary, size_t size)
 	region_alloc(e, (void *)(USTACKTOP - PGSIZE), PGSIZE);
 
 	e->env_tf.tf_eip = elf->e_entry;
-	e->env_tf.tf_eflags = elf->e_flags;
 
 #ifdef CONFIG_KSPACE
 	bind_functions(e, elf);
