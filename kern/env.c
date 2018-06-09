@@ -503,12 +503,6 @@ env_destroy(struct Env *e)
 	if (e == curenv) {
 		sched_yield();
 	}
-
-	// TODO: dead code?
-
-	cprintf("Destroyed the only environment - nothing more to do!\n");
-	while (1)
-		monitor(NULL);
 }
 
 #ifdef CONFIG_KSPACE
