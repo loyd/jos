@@ -63,15 +63,17 @@ alloc_block(void)
 
 	uint32_t bn;
 	for (bn = 0; bn < super->s_nblocks; bn += 32) {
-		if (bitmap[bn / 32] == ~0) {
+		unsigned chunk = bn / 32;
+
+		if (bitmap[chunk] == 0) {
 			continue;
 		}
 
-		while (!(bitmap[bn / 32] & 1 << (bn % 32))) {
+		while (!(bitmap[chunk] & 1 << (bn % 32))) {
 			++bn;
 		}
 
-		bitmap[bn / 32] &= ~(1 << (bn % 32));
+		bitmap[chunk] &= ~(1 << (bn % 32));
 		flush_block(bitmap);
 
 		return bn;
