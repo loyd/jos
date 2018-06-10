@@ -9,6 +9,7 @@
 #include <kern/monitor.h>
 #include <kern/env.h>
 #include <kern/syscall.h>
+#include <kern/vsyscall.h>
 #include <kern/sched.h>
 #include <kern/kclock.h>
 #include <kern/picirq.h>
@@ -106,6 +107,11 @@ trap_init_percpu(void)
 	lidt(&idt_pd);
 }
 
+void
+update_gettime(void)
+{
+	vsys[VSYS_gettime] = gettime();
+}
 
 void
 clock_idt_init(void)
@@ -114,6 +120,8 @@ clock_idt_init(void)
 	// init idt structure
 	SETGATE(idt[IRQ_OFFSET + IRQ_CLOCK], 0, GD_KT, (int)(&clock_thdlr), 0);
 	lidt(&idt_pd);
+
+	update_gettime();
 }
 
 
@@ -121,8 +129,8 @@ void
 print_trapframe(struct Trapframe *tf)
 {
 	cprintf("TRAP frame at %p\n", tf);
-	print_regs(&tf->tf_regs);
 	cprintf("  es   0x----%04x\n", tf->tf_es);
+	print_regs(&tf->tf_regs);
 	cprintf("  ds   0x----%04x\n", tf->tf_ds);
 	cprintf("  trap 0x%08x %s\n", tf->tf_trapno, trapname(tf->tf_trapno));
 	// If this trap was a page fault that just happened
@@ -198,6 +206,8 @@ trap_dispatch(struct Trapframe *tf)
 	if (tf->tf_trapno == IRQ_OFFSET + IRQ_CLOCK) {
 		rtc_check_status();
 		pic_send_eoi(IRQ_CLOCK);
+
+		update_gettime();
 
 		sched_yield();
 		return;

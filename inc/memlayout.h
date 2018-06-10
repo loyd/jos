@@ -50,8 +50,10 @@
  *    UVPT      ---->  +------------------------------+ 0xef400000
  *                     |          RO PAGES            | R-/R-  PTSIZE
  *    UPAGES    ---->  +------------------------------+ 0xef000000
- *                     |           RO ENVS            | R-/R-  PTSIZE
- * UTOP,UENVS ------>  +------------------------------+ 0xeec00000
+ *                     |           RO ENVS            | R-/R-  PTSIZE - PGSIZE
+ *    UENVS   ------>  +------------------------------+ 0xeec01000
+ *                     |           RO VSYS            | R-/R-  PGSIZE
+ * UTOP,UVSYS ------>  +------------------------------+ 0xeec00000
  * UXSTACKTOP -/       |     User Exception Stack     | RW/RW  PGSIZE
  *                     +------------------------------+ 0xeebff000
  *                     |       Empty Memory (*)       | --/--  PGSIZE
@@ -114,17 +116,16 @@
 // Read-only copies of the Page structures
 #define UPAGES		(UVPT - PTSIZE)
 // Read-only copies of the global env structures
-#define UENVS		(UPAGES - PTSIZE)
+#define UENVS		(UPAGES - PTSIZE + PGSIZE)
 // Read-only virtual syscall space
-// LAB 12: Your code here.
-#define UVSYS       0
+#define UVSYS       (UENVS - PGSIZE)
 
 /*
  * Top of user VM. User can manipulate VA from UTOP-1 and down!
  */
 
 // Top of user-accessible VM
-#define UTOP		UENVS
+#define UTOP		UVSYS
 // Top of one-page user exception stack
 #define UXSTACKTOP	UTOP
 // Next page left invalid to guard against exception stack overflow; then:

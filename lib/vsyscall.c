@@ -4,9 +4,7 @@
 static inline int32_t
 vsyscall(int num)
 {
-	// LAB 12: Your code here.
-	cprintf("vsyscall() is not implemented yet!");
-	return 0;
+	return *((int32_t *)UVSYS + num);
 }
 
 int vsys_gettime(void)
