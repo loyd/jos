@@ -3,14 +3,38 @@
 #include <inc/x86.h>
 #include <kern/kclock.h>
 #include <inc/stdio.h>
+#include <inc/time.h>
+#include <inc/string.h>
+
+static struct tm
+read_time(void)
+{
+	return (struct tm){
+		.tm_sec = BCD2BIN(mc146818_read(RTC_SEC)),
+		.tm_min = BCD2BIN(mc146818_read(RTC_MIN)),
+		.tm_hour = BCD2BIN(mc146818_read(RTC_HOUR)),
+		.tm_mday = BCD2BIN(mc146818_read(RTC_DAY)),
+		.tm_mon = BCD2BIN(mc146818_read(RTC_MON)) - 1,
+		.tm_year = BCD2BIN(mc146818_read(RTC_YEAR)),
+	};
+}
 
 int gettime(void)
 {
 	nmi_disable();
-	// LAB 12: your code here
+
+	struct tm time, time_chk;
+
+	do {
+		while (mc146818_read(RTC_AREG) & RTC_UPDATE_IN_PROGRESS);
+
+		time = read_time();
+		time_chk = read_time();
+	} while (memcmp(&time, &time_chk, sizeof(time)));
 
 	nmi_enable();
-	return 0;
+
+	return timestamp(&time);
 }
 
 void

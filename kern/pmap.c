@@ -84,7 +84,7 @@ static void check_page_installed_pgdir(void);
 static void *
 boot_alloc(uint32_t n)
 {
-	const uint32_t BOOTMEM = 0x400000;
+	const uint32_t BOOTMEM = 0x800000;
 	static char *nextfree;	// virtual address of next byte of free memory
 
 	// Initialize nextfree if this is the first time.
@@ -826,7 +826,7 @@ check_kern_pgdir(void)
 		case PDX(KSTACKTOP-1):
 		case PDX(UPAGES):
 		case PDX(UENVS):
-		case PDX(UVSYS):
+		/*case PDX(UVSYS):*/
 			assert(pgdir[i] & PTE_P);
 			break;
 		default:
