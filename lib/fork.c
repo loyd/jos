@@ -72,8 +72,9 @@ duppage(envid_t envid, unsigned pn)
 	void *addr = (void *)(pn * PGSIZE);
 
 	int perm = uvpt[pn] & PTE_SYSCALL;
+	bool is_shared = perm & PTE_SHARE;
 
-	if ((perm & PTE_W) || (perm & PTE_COW)) {
+	if (!is_shared && ((perm & PTE_W) || (perm & PTE_COW))) {
 		perm &= ~PTE_W;
 		perm |= PTE_COW;
 	}
@@ -82,7 +83,7 @@ duppage(envid_t envid, unsigned pn)
 		panic("sys_page_map: %d", res);
 	}
 
-	if ((res = sys_page_map(0, addr, 0, addr, perm)) < 0) {
+	if (!is_shared && (res = sys_page_map(0, addr, 0, addr, perm)) < 0) {
 		panic("sys_page_map: %d", res);
 	}
 
