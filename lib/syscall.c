@@ -121,3 +121,8 @@ int sys_gettime(void)
 {
 	return syscall(SYS_gettime, 0, 0, 0, 0, 0, 0);
 }
+
+unsigned sys_get_mono_ts(void)
+{
+	return syscall(SYS_get_mono_ts, 0, 0, 0, 0, 0, 0);
+}

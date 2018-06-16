@@ -12,6 +12,7 @@
 #include <kern/console.h>
 #include <kern/sched.h>
 #include <kern/kclock.h>
+#include <kern/tsc.h>
 
 // Print a string to the system console.
 // The string is exactly 'len' characters long.
@@ -436,6 +437,12 @@ sys_gettime(void)
 	return gettime();
 }
 
+static int
+sys_get_mono_ts(void)
+{
+	return get_mono_ts();
+}
+
 // Dispatches to the correct kernel function, passing the arguments.
 int32_t
 syscall(uint32_t syscallno, uint32_t a1, uint32_t a2, uint32_t a3, uint32_t a4, uint32_t a5)
@@ -473,6 +480,8 @@ syscall(uint32_t syscallno, uint32_t a1, uint32_t a2, uint32_t a3, uint32_t a4, 
 			return sys_ipc_recv((void *)a1);
 		case SYS_gettime:
 			return sys_gettime();
+		case SYS_get_mono_ts:
+			return sys_get_mono_ts();
 		default:
 			return -E_INVAL;
 	}

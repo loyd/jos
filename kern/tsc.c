@@ -212,3 +212,7 @@ void timer_stop(void)
 	start = 0;
 }
 
+unsigned get_mono_ts(void)
+{
+	return read_tsc() / cpu_freq;
+}

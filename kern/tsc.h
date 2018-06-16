@@ -9,5 +9,6 @@
 void tsc_calibrate(void);
 void timer_start(void);
 void timer_stop(void);
+unsigned get_mono_ts(void);
 
 #endif	// !JOS_KERN_TSC_H
