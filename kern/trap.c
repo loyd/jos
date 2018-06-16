@@ -324,7 +324,8 @@ fast_syscall_bottom(struct Trapframe *tf)
 		"sti\n\t"
 		"sysexit"
 		:
-		: "d" (tf->tf_eip),
+		: "a" (tf->tf_regs.reg_eax),
+		  "d" (tf->tf_eip),
 		  "c" (tf->tf_esp)
 		: "cc", "memory");
 
