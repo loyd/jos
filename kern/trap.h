@@ -15,6 +15,7 @@ extern struct Pseudodesc idt_pd;
 
 void clock_idt_init(void);
 void trap_init(void);
+void fastsyscall_init(void);
 void trap_init_percpu(void);
 void print_regs(struct PushRegs *regs);
 void print_trapframe(struct Trapframe *tf);

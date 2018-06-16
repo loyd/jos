@@ -307,4 +307,21 @@ nmi_disable(void)
 	outb(0x70, inb(0x70) | NMI_LOCK );
 }
 
+static inline void
+wrmsr(unsigned msr, uint32_t low, uint32_t high)
+{
+	asm volatile(
+		"1: wrmsr\n"
+		"2:\n"
+		:
+		: "c" (msr),
+		  "a" (low),
+		  "d" (high)
+		: "memory");
+}
+
+#define SYSENTER_CS_MSR 0x174
+#define SYSENTER_ESP_MSR 0x175
+#define SYSENTER_EIP_MSR 0x176
+
 #endif /* !JOS_INC_X86_H */

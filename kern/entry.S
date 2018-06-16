@@ -139,6 +139,33 @@ sys_exit:
 	jmp .
 #endif
 
+.globl fast_syscall
+.type  fast_syscall, @function
+.align 2
+fast_syscall:
+	cli
+
+	# Make trapframe
+	pushl $(GD_UD|3)
+	pushl %ebp # esp
+	pushfl
+	orl $0x200, (%esp)
+	pushl $(GD_UT|3)
+	pushl (%ebp) # eip
+	pushl $0
+	pushl $-1
+	push %ds
+	push %es
+	pushal
+
+	# Restrict backtrace
+	xor %ebp, %ebp
+
+	# Handle syscall
+	pushl %esp
+	call fast_syscall_bottom
+	hlt
+
 .data
 ###################################################################
 # boot stack

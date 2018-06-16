@@ -85,6 +85,16 @@ trap_init(void)
 	trap_init_percpu();
 }
 
+void
+fastsyscall_init(void)
+{
+	void fast_syscall(void);
+
+	wrmsr(SYSENTER_CS_MSR, GD_KT, 0);
+	wrmsr(SYSENTER_ESP_MSR, KSTACKTOP, 0);
+	wrmsr(SYSENTER_EIP_MSR, (uint32_t)fast_syscall, 0);
+}
+
 // Initialize and load the per-CPU TSS and IDT
 void
 trap_init_percpu(void)
@@ -283,6 +293,42 @@ trap(struct Trapframe *tf)
 		env_run(curenv);
 	else
 		sched_yield();
+}
+
+void
+fast_syscall_bottom(struct Trapframe *tf)
+{
+	// The environment may have set DF and some versions
+	// of GCC rely on DF being clear
+	asm volatile("cld" ::: "cc");
+
+	assert(!(read_eflags() & FL_IF));
+
+	assert(curenv);
+	// TODO
+	assert(curenv->env_status != ENV_DYING);
+
+	curenv->env_tf = *tf;
+	tf = &curenv->env_tf;
+
+	tf->tf_regs.reg_eax = syscall(
+		tf->tf_regs.reg_eax,
+		tf->tf_regs.reg_edx,
+		tf->tf_regs.reg_ecx,
+		tf->tf_regs.reg_ebx,
+		tf->tf_regs.reg_edi,
+		tf->tf_regs.reg_esi
+	);
+
+	asm volatile(
+		"sti\n\t"
+		"sysexit"
+		:
+		: "d" (tf->tf_eip),
+		  "c" (tf->tf_esp)
+		: "cc", "memory");
+
+	panic("BUG");
 }
 
 

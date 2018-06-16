@@ -8,6 +8,15 @@ syscall(int num, int check, uint32_t a1, uint32_t a2, uint32_t a3, uint32_t a4, 
 {
 	int32_t ret;
 
+#ifdef FAST_SYSCALL
+	int32_t fast_syscall_user(int num, uint32_t a1, uint32_t a2, uint32_t a3, uint32_t a4, uint32_t a5);
+
+	// Fast system call: pass system call number in AX,
+	// up to five parameters in DX, CX, BX, DI, SI.
+	// Store ESP in EBP and EIP in [EBP].
+	ret = fast_syscall_user(num, a1, a2, a3, a4, a5);
+
+#else
 	// Generic system call: pass system call number in AX,
 	// up to five parameters in DX, CX, BX, DI, SI.
 	// Interrupt kernel with T_SYSCALL.
@@ -30,6 +39,7 @@ syscall(int num, int check, uint32_t a1, uint32_t a2, uint32_t a3, uint32_t a4, 
 		  "D" (a4),
 		  "S" (a5)
 		: "cc", "memory");
+#endif
 
 	if(check && ret > 0)
 		panic("syscall %d returned %d (> 0)", num, ret);

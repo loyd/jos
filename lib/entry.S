@@ -37,3 +37,40 @@ args_exist:
 	call libmain
 1:	jmp 1b
 
+
+.globl fast_syscall_user
+.type  fast_syscall_user, @function
+.align 2
+fast_syscall_user:
+	pushl %ebp
+	movl %esp, %ebp
+
+	# Follow cdecl
+	pushl %ebx
+	pushl %edi
+	pushl %esi
+
+	# Pass arguments
+	movl 8(%ebp), %eax
+	movl 12(%ebp), %edx
+	movl 16(%ebp), %ecx
+	movl 20(%ebp), %ebx
+	movl 24(%ebp), %edi
+	movl 28(%ebp), %esi
+
+	# Save esp and eip
+	pushl $(fast_syscall_ret)
+	movl %esp, %ebp
+
+	sysenter
+
+fast_syscall_ret:
+	addl $4, %esp
+
+	# Follow cdecl
+	popl %esi
+	popl %edi
+	popl %ebx
+
+	popl %ebp
+	ret
