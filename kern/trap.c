@@ -320,6 +320,12 @@ fast_syscall_bottom(struct Trapframe *tf)
 		tf->tf_regs.reg_esi
 	);
 
+	if (curenv && curenv->env_status == ENV_RUNNING) {
+		lcr3(PADDR(curenv->env_pgdir));
+	} else {
+		sched_yield();
+	}
+
 	asm volatile(
 		"sti\n\t"
 		"sysexit"
