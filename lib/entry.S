@@ -49,6 +49,8 @@ fast_syscall_user:
 	pushl %ebx
 	pushl %edi
 	pushl %esi
+	pushl %edx
+	pushl %ecx
 
 	# Pass arguments
 	movl 8(%ebp), %eax
@@ -68,6 +70,8 @@ fast_syscall_ret:
 	addl $4, %esp
 
 	# Follow cdecl
+	popl %ecx
+	popl %edx
 	popl %esi
 	popl %edi
 	popl %ebx
